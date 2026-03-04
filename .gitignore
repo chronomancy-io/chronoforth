@@ -1,0 +1,24 @@
+# Build outputs
+*.d64
+*.d71
+*.d81
+*.prg
+*.crt
+*.bin
+*.lbl
+build/
+deploy/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# VICE logs
+vice.log
+
+*.o
+

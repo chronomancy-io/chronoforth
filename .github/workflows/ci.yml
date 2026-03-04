@@ -1,0 +1,58 @@
+---
+name: CI
+
+'on':
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # libflac8 (required by VICE) does not exist on 24.04
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache VICE package
+        uses: actions/cache@v4
+        with:
+          path: headlessvice_3.8.deb
+          key: vice-3.8.0-ubuntu-22.04
+
+      - name: Install dependencies
+        run: |
+          echo "Downloading VICE headless package..."
+          if [ ! -f headlessvice_3.8.deb ]; then
+            wget https://github.com/VICE-Team/svn-mirror/releases/download/3.8.0/headlessvice_3.8.deb
+          else
+            echo "Using cached VICE package"
+          fi
+
+          echo "Verifying VICE package checksum..."
+          sha256sum -c ci/vice/headlessvice_3.8.deb.sha256
+
+          echo "Installing system dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y libportaudio2 acme ruby-asciidoctor-pdf
+
+          echo "Installing VICE..."
+          sudo apt-get install -y ./headlessvice_3.8.deb
+
+      - name: Build and test
+        run: make deploy
+
+      - name: Archive screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots
+          path: build/*.png
+
+      - name: Archive ChronoForth
+        uses: actions/upload-artifact@v4
+        with:
+          name: chronoforth
+          path: deploy

@@ -1,0 +1,23 @@
+schema_version: "1.0.0"
+repository:
+  name: "chronoforth"
+  type: "tool"
+  language: "Forth"
+  cde_compliant: true
+  mss_version: "1.0.0"
+  wasp_version: "1.0.0"
+
+standards:
+  ci_workflow: ".github/workflows/ci.yml"
+  license: "Apache-2.0"
+  code_style: "inline comments (1 per 3-5 LOC)"
+  documentation: "README.md + inline comments"
+
+build:
+  primary_command: "make"
+  test_command: "make test"
+
+quality:
+  linting: false
+  security_scan: false
+  coverage_target: null
