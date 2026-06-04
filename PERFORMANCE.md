@@ -193,8 +193,10 @@ unchanged and still pass the full suite.
 
 ## Methodology & Verification
 
-Performance and correctness are measured by `tools/chrono6502`, a dependency-free
-cycle-exact NMOS 6502 core in Rust:
+Performance and correctness are measured by
+[chrono6502](https://github.com/chronomancy-io/chrono6502), a dependency-free
+cycle-exact NMOS 6502 core in Rust. It lives in its own repository and is fetched
+into `tools/chrono6502` by `make emu`:
 
 - **`selftest` / `ledger`** — JSR a word by its ACME symbol address, count cycles
   to `RTS`, verify the stack effect against its `( -- )` contract.
@@ -220,12 +222,15 @@ The core is validated four independent ways:
 ### Reproduce
 
 ```bash
-make durexforth.prg
-acme -I asm --vicelabels labels.vice asm/durexforth.asm
-cd tools/chrono6502 && cargo build --release && cargo test
-./target/release/chrono6502 --prg ../../durexforth.prg --labels ../../labels.vice selftest
-./target/release/chrono6502 --prg ../../durexforth.prg gate
-./target/release/chrono6502 --prg ../../durexforth.prg defcyc ": r dup + dup + dup + ;" r 5
+make verify          # fetches chrono6502, builds it, runs cargo test + selftest + the Forth-2012 gate
+
+# …or step by step:
+make durexforth.prg labels.vice
+make emu             # clones chronomancy-io/chrono6502 into tools/chrono6502 and builds it
+CHRONO=tools/chrono6502/target/release/chrono6502
+$CHRONO --prg durexforth.prg --labels labels.vice selftest
+$CHRONO --prg durexforth.prg --repo . gate
+$CHRONO --prg durexforth.prg --repo . defcyc ": r dup + dup + dup + ;" r 5
 ```
 
 ## Memory & threading model (unchanged)

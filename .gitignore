@@ -23,3 +23,7 @@ vice.log
 *.o
 
 labels.vice
+
+# Emulator now lives in its own repo (chronomancy-io/chrono6502);
+# `make emu` clones it here on demand.
+/tools/chrono6502/
