@@ -10,7 +10,7 @@ Forth system for Commodore 64 with subroutine threading and tail-call eliminatio
 
 Minimal Forth for the C64, built on DurexForth. Stripped to a bare kernel with no graphics, no sound, no float. Subroutine-threaded with native-code optimizations: composite words are open-coded (MIN/MAX **4–7×**), the `DO…LOOP` back-edge is a direct `JMP` (**1.76× less loop overhead**), `DROP` compiles to a single `INX`, and **opt-in inline threading** (`+inline`) makes 30 hot primitives compile as native code instead of calls (1.29×–1.44× on stack-heavy code).
 
-Every performance claim in this README is **machine-verified**: cycle counts come from a cycle-exact 6502 core (`tools/chrono6502`), cross-checked against VICE, and the full Forth-2012 test suite passes in-emulator. See [PERFORMANCE.md](PERFORMANCE.md).
+Every performance claim in this README is **machine-verified**: cycle counts come from a cycle-exact 6502 core ([chrono6502](https://github.com/chronomancy-io/chrono6502), fetched by `make emu`), cross-checked against VICE, and the full Forth-2012 test suite passes in-emulator. See [PERFORMANCE.md](PERFORMANCE.md).
 
 ## Background
 

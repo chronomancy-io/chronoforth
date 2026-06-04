@@ -49,8 +49,12 @@ help:
 
 build: $(DISK_IMAGE)
 
-# --- Headless cycle/correctness verification (tools/chrono6502) ---
-CHRONO = tools/chrono6502/target/release/chrono6502
+# --- Headless cycle/correctness verification ---
+# The emulator now lives in its own repo (chronomancy-io/chrono6502). `make emu`
+# fetches it into tools/chrono6502 (gitignored) on demand and builds it.
+CHRONO6502_REPO = https://github.com/chronomancy-io/chrono6502
+CHRONO_DIR = tools/chrono6502
+CHRONO = $(CHRONO_DIR)/target/release/chrono6502
 
 labels.vice: durexforth.prg
 	$(AS) -I asm --vicelabels labels.vice asm/durexforth.asm
@@ -58,10 +62,11 @@ labels.vice: durexforth.prg
 labels: labels.vice
 
 emu:
-	cd tools/chrono6502 && cargo build --release
+	@test -d $(CHRONO_DIR) || git clone --depth 1 $(CHRONO6502_REPO) $(CHRONO_DIR)
+	cd $(CHRONO_DIR) && cargo build --release
 
 verify: durexforth.prg labels.vice emu
-	cd tools/chrono6502 && cargo test
+	cd $(CHRONO_DIR) && cargo test
 	$(CHRONO) --prg durexforth.prg --labels labels.vice selftest
 	$(CHRONO) --prg durexforth.prg --repo . gate
 

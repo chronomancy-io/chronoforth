@@ -138,7 +138,7 @@ the turnkey image stays compact.
 
 ### Component 7: Verification Harness
 
-**File Location:** `tools/chrono6502/` (Rust)
+**File Location:** [chrono6502](https://github.com/chronomancy-io/chrono6502) (Rust; its own repo, fetched into `tools/chrono6502/` by `make emu`)
 **Responsibility:** Cycle-exact measurement and full-suite correctness, headless
 **Inputs:** `durexforth.prg` + ACME symbols; Forth source served from `forth/`/`test/`
 **Outputs:** Per-word cycle counts, stack-effect checks, pass/fail of the test suite
