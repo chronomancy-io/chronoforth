@@ -16,9 +16,6 @@ swap here swap ! ; immediate
 latestxt compile, ; immediate
 
 : \ source >in ! drop ; immediate
-: <> = 0= ;
-: u> swap u< ;
-: 0<> 0= 0= ;
 
 : parse >r source >in @ /string
 over swap begin dup while over c@ r@ <>
@@ -189,6 +186,11 @@ here $801 - \ code + data
 top 1+ latest - \ dictionary
 $20 + + - \ save-pack padding
 . .( bytes remain.) cr
+
+\ Inline-threading of hot primitives is left OFF by default: it trades the
+\ ability to SEE-decompile a word for ~1.3-1.4x on stack-heavy code. Enable it
+\ for hot user code with `+inline` (and `-inline` to restore); SEE works on any
+\ word compiled while inlining is off.
 
 cr .( save new chronoforth..)
 save-pack @0:durexforth

@@ -233,7 +233,7 @@ FOUND_WORD_WITH_NO_TCE = * + 1
     beq EXECUTE
 
     ; OK, this word should be compiled...
-    jmp COMPILE_COMMA
+    jmp compile_xt
 
     +BACKLINK "notfound",8
 print_word_not_found_error ; ( caddr u -- )

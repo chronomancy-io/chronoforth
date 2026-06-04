@@ -89,15 +89,19 @@ Key compilation strategy:
 **Dependencies:** Zero page variables
 
 ```asm
-; Example: DUP implementation (6 cycles, 6 bytes)
+; DUP implementation — 24 cycles, 10 bytes (verified: chrono6502 selftest)
 DUP
-    dex                 ; 2 cycles - make room on stack
-    lda MSB + 1, x      ; 4 cycles - copy MSB
-    sta MSB, x
-    lda LSB + 1, x      ; 4 cycles - copy LSB
-    sta LSB, x
-    rts                 ; 6 cycles
+    dex                 ; 2  - make room on stack
+    lda MSB + 1, x      ; 4  - copy MSB
+    sta MSB, x          ; 4
+    lda LSB + 1, x      ; 4  - copy LSB
+    sta LSB, x          ; 4
+    rts                 ; 6
 ```
+
+When `DUP` (or any of 30 hot primitives) is *compiled* into a definition, its
+body is inlined directly — no `JSR`/`RTS` — by `asm/inline.asm`. See
+[PERFORMANCE.md](PERFORMANCE.md).
 
 ### Component 4: Math Operations
 
@@ -116,6 +120,34 @@ Implements: `* / MOD /MOD */ UM* UM/MOD`
 **Inputs:** Filenames, device numbers
 **Outputs:** Loaded/saved data
 **Dependencies:** KERNAL ROM routines
+
+### Component 6: Inline Threading
+
+**File Location:** `asm/inline.asm`
+**Responsibility:** Compile hot primitives as native code instead of `JSR` calls
+**Inputs:** The xt being compiled by the outer interpreter
+**Outputs:** Either an inlined body (position-independent machine code) or a normal `JSR`
+**Dependencies:** Compiler (`compile_a`, `COMPILE_COMMA`), the no-TCE flag
+
+`compile_xt` replaces `JMP COMPILE_COMMA` in the interpreter's compile path. It
+looks the xt up in a small table of (address, body-length) for 30 hot
+primitives and, when inlining is enabled, blits the body to `HERE`; otherwise it
+falls through to the ordinary `JSR` compile. Inlining is a runtime-toggleable
+optimizer (`+inline` / `-inline`); the system source is compiled with it off so
+the turnkey image stays compact.
+
+### Component 7: Verification Harness
+
+**File Location:** `tools/chrono6502/` (Rust)
+**Responsibility:** Cycle-exact measurement and full-suite correctness, headless
+**Inputs:** `durexforth.prg` + ACME symbols; Forth source served from `forth/`/`test/`
+**Outputs:** Per-word cycle counts, stack-effect checks, pass/fail of the test suite
+**Dependencies:** none (dependency-free 6502 core + minimal KERNAL/IEC stubs)
+
+Boots the real ChronoForth in-process in ~0.1 s and runs the entire Forth-2012
+suite as the correctness gate; measures any word's exact cycle cost. Validated
+against hand-derivation, `cargo test`, and VICE. See
+[PERFORMANCE.md](PERFORMANCE.md).
 
 ## SOLID Principles Applied
 
@@ -146,14 +178,16 @@ graph LR
 
 ### Zero Page Layout
 
+Verified against `asm/durexforth.asm` (the X register is the data-stack pointer,
+starting at 0 and decremented on push; zero-page,X access wraps within the page):
+
 | Address | Name | Purpose |
 |---------|------|---------|
-| $02-$21 | LSB | Data stack low bytes |
-| $22-$41 | MSB | Data stack high bytes |
-| $42-$43 | W | Work register |
-| $44-$45 | W2 | Work register 2 |
-| $46-$47 | W3 | Work register 3 |
-| $48 | X | Stack pointer backup |
+| $03–$3a | LSB region | Data stack low bytes (base `LSB=$3b`, grows down) |
+| $3b–$72 | MSB region | Data stack high bytes (base `MSB=$73`, grows down) |
+| $8b–$8c | W | Work register |
+| $8d–$8e | W2 | Work register 2 |
+| $9e–$9f | W3 | Work register 3 |
 
 ## Data Flow
 

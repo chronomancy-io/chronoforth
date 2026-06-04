@@ -123,19 +123,31 @@ pushya
 
     +BACKLINK "0", 1
 ZERO
+    dex
     lda	#0
-    tay
-    jmp pushya
+    sta LSB, x
+    sta MSB, x
+ZERO_END
+    rts
 
     +BACKLINK "1", 1
 ONE
-    +VALUE 1
+    dex
+    lda	#1
+    sta LSB, x
+    lda #0
+    sta MSB, x
+ONE_END
+    rts
 
     +BACKLINK "-1", 2
 MINUS_ONE
-    lda	#-1
-    tay
-    jmp pushya
+    dex
+    lda	#$ff
+    sta LSB, x
+    sta MSB, x
+MINUS_ONE_END
+    rts
 
 ; START - points to the code of the startup word.
     +BACKLINK "start", 5
@@ -152,6 +164,7 @@ MINUS_ONE
 !src "move.asm"
 !src "interpreter.asm"
 !src "compiler.asm"
+!src "inline.asm"
 !src "control.asm"
 !src "io.asm"
 !src "lowercase.asm"

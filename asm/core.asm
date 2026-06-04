@@ -1,5 +1,5 @@
-; DROP SWAP DUP ?DUP NIP OVER 2DUP 1+ 1- + = 0= AND ! @ C! C@ COUNT < > MAX MIN
-; TUCK >R R> R@ BL PICK DEPTH WITHIN ERASE FILL BASE 2* ROT +! SPLIT
+; DROP SWAP DUP ?DUP NIP OVER 2DUP 1+ 1- + = 0= <> 0<> AND ! @ C! C@ COUNT < >
+; MAX MIN TUCK >R R> R@ BL PICK DEPTH WITHIN ERASE FILL BASE 2* ROT +! SPLIT
 
     +BACKLINK "drop", 4 | F_IMMEDIATE
 DROP
@@ -24,6 +24,7 @@ SWAP
     lda	LSB + 1, x
     sta LSB, x
     sty	LSB + 1, x
+SWAP_END
     rts
 
     +BACKLINK "dup", 3
@@ -33,6 +34,7 @@ DUP
     sta	MSB, x
     lda	LSB + 1, x
     sta	LSB, x
+DUP_END
     rts
 
     +BACKLINK "?dup", 4
@@ -44,8 +46,12 @@ QDUP
 
     +BACKLINK "nip", 3
 NIP ; ( a b -- b )
-    jsr SWAP
+    lda LSB, x
+    sta LSB+1, x
+    lda MSB, x
+    sta MSB+1, x
     inx
+NIP_END
     rts
 
     +BACKLINK "over", 4
@@ -55,19 +61,32 @@ OVER
     sta	MSB, x
     lda	LSB + 2, x
     sta	LSB, x
+OVER_END
     rts
 
     +BACKLINK "2dup", 4
-TWODUP
-    jsr OVER
-    jmp OVER
+TWODUP ; ( a b -- a b a b )
+    dex
+    dex
+    lda LSB+2, x
+    sta LSB, x
+    lda MSB+2, x
+    sta MSB, x
+    lda LSB+3, x
+    sta LSB+1, x
+    lda MSB+3, x
+    sta MSB+1, x
+TWODUP_END
+    rts
 
     +BACKLINK "1+", 2
 ONEPLUS
     inc LSB, x
     bne +
     inc MSB, x
-+   rts
++
+ONEPLUS_END
+    rts
 
     +BACKLINK "1-", 2
 ONEMINUS
@@ -75,6 +94,7 @@ ONEMINUS
     bne +
     dec MSB, x
 +   dec LSB, x
+ONEMINUS_END
     rts
 
     +BACKLINK "+", 1
@@ -89,6 +109,7 @@ PLUS
     sta MSB + 1, x
 
     inx
+PLUS_END
     rts
 
     +BACKLINK "=", 1
@@ -104,6 +125,7 @@ EQUAL
 +   inx
     sty MSB, x
     sty	LSB, x
+EQUAL_END
     rts
 
 ; 0=
@@ -117,6 +139,35 @@ ZEQU
     dey
 +   sty MSB, x
     sty LSB, x
+ZEQU_END
+    rts
+
+    +BACKLINK "<>", 2
+NOT_EQUAL ; ( a b -- flag )  flag = -1 if a<>b else 0
+    ldy #$ff
+    lda LSB, x
+    cmp LSB + 1, x
+    bne +
+    lda MSB, x
+    cmp MSB + 1, x
+    bne +
+    ldy #0
++   inx
+    sty MSB, x
+    sty LSB, x
+NOT_EQUAL_END
+    rts
+
+    +BACKLINK "0<>", 3
+ZERO_NOT_EQUAL ; ( n -- flag )  flag = -1 if n<>0 else 0
+    ldy #0
+    lda LSB, x
+    ora MSB, x
+    beq +
+    ldy #$ff
++   sty MSB, x
+    sty LSB, x
+ZERO_NOT_EQUAL_END
     rts
 
     +BACKLINK "and", 3
@@ -147,6 +198,7 @@ STORE
 
     inx
     inx
+STORE_END
     rts
 
     +BACKLINK "@", 1
@@ -162,6 +214,7 @@ FETCH
     iny
     lda	(W),y
     sta MSB,x
+FETCH_END
     rts
 
     +BACKLINK "c!", 2
@@ -187,11 +240,20 @@ FETCHBYTE
     rts
 
     +BACKLINK "count", 5
-COUNT
-    jsr DUP
-    jsr ONEPLUS
-    jsr SWAP
-    jmp FETCHBYTE
+COUNT ; ( a -- a+1 c )  c = byte at a
+    lda LSB, x
+    sta W
+    lda MSB, x
+    sta W + 1
+    inc LSB, x
+    bne +
+    inc MSB, x
++   dex
+    ldy #0
+    lda (W), y
+    sta LSB, x
+    sty MSB, x
+    rts
 
     +BACKLINK "<", 1
 LESS_THAN
@@ -208,37 +270,80 @@ LESS_THAN
 +   inx
     sty LSB,x
     sty MSB,x
+LESS_THAN_END
     rts
 
     +BACKLINK ">", 1
-GREATER_THAN
-    jsr SWAP
-    jmp LESS_THAN
+GREATER_THAN ; ( a b -- flag )  flag = a>b = b<a : signed (b - a) < 0
+    ldy #0
+    sec
+    lda LSB,x
+    sbc LSB+1,x
+    lda MSB,x
+    sbc MSB+1,x
+    bvc +
+    eor #$80
++   bpl +
+    dey
++   inx
+    sty LSB,x
+    sty MSB,x
+GREATER_THAN_END
+    rts
 
     +BACKLINK "max", 3
-MAX
-    jsr TWODUP
-    jsr LESS_THAN
-    jsr ZBRANCH
-    !word +
-    jsr SWAP
+MAX ; ( a b -- max )  signed compare a-b; keep a if a>=b else move b up
+    sec
+    lda LSB+1, x
+    sbc LSB, x
+    lda MSB+1, x
+    sbc MSB, x
+    bvc +
+    eor #$80
++   bpl +
+    lda LSB, x
+    sta LSB+1, x
+    lda MSB, x
+    sta MSB+1, x
 +   inx
+MAX_END
     rts
 
     +BACKLINK "min", 3
-MIN
-    jsr TWODUP
-    jsr GREATER_THAN
-    jsr ZBRANCH
-    !word +
-    jsr SWAP
+MIN ; ( a b -- min )  signed compare a-b; keep a if a<b else move b up
+    sec
+    lda LSB+1, x
+    sbc LSB, x
+    lda MSB+1, x
+    sbc MSB, x
+    bvc +
+    eor #$80
++   bmi +
+    lda LSB, x
+    sta LSB+1, x
+    lda MSB, x
+    sta MSB+1, x
 +   inx
+MIN_END
     rts
 
     +BACKLINK "tuck", 4
-TUCK ; ( x y -- y x y )
-    jsr SWAP
-    jmp OVER
+TUCK ; ( a b -- b a b )
+    dex
+    lda LSB+1, x
+    sta LSB, x
+    lda MSB+1, x
+    sta MSB, x
+    lda LSB+2, x
+    sta LSB+1, x
+    lda MSB+2, x
+    sta MSB+1, x
+    lda LSB, x
+    sta LSB+2, x
+    lda MSB, x
+    sta MSB+2, x
+TUCK_END
+    rts
 
     ; Exempt from TCE as top of return stack must contain a return address.
     +BACKLINK ">r", 2 | F_NO_TAIL_CALL_ELIMINATION
@@ -293,7 +398,13 @@ R_FETCH
 
     +BACKLINK "bl", 2
 BL
-    +VALUE	K_SPACE
+    dex
+    lda #K_SPACE
+    sta LSB, x
+    lda #0
+    sta MSB, x
+BL_END
+    rts
 
     +BACKLINK "pick", 4
     txa
@@ -321,13 +432,35 @@ BL
     rts
 
     +BACKLINK "within", 6
-WITHIN ; ( test low high -- flag )
-    jsr OVER
-    jsr MINUS
-    jsr TO_R
-    jsr MINUS
-    jsr R_TO
-    jmp U_LESS
+WITHIN ; ( test low high -- flag )  flag = (test-low) u< (high-low)
+    sec                 ; W = high - low
+    lda LSB, x
+    sbc LSB+1, x
+    sta W
+    lda MSB, x
+    sbc MSB+1, x
+    sta W+1
+    sec                 ; test - low, in place at x+2
+    lda LSB+2, x
+    sbc LSB+1, x
+    sta LSB+2, x
+    lda MSB+2, x
+    sbc MSB+1, x
+    sta MSB+2, x
+    inx                 ; drop low, high; TOS = test-low
+    inx
+    ldy #0
+    lda MSB, x          ; (test-low) u< (high-low) ?
+    cmp W+1
+    bcc +
+    bne ++
+    lda LSB, x
+    cmp W
+    bcs ++
++   dey
+++  sty LSB, x
+    sty MSB, x
+    rts
 
 ; ERASE ( start len -- )
     +BACKLINK "erase", 5
@@ -376,8 +509,10 @@ _BASE
     !word 16
 
     +BACKLINK "2*", 2
+TWOSTAR
     asl LSB, x
     rol MSB, x
+TWOSTAR_END
     rts
 
     +BACKLINK "rot", 3 ; ( a b c -- b c a )
@@ -394,6 +529,7 @@ ROT
     lda LSB  , x
     sta LSB+1, x
     sty LSB  , x
+ROT_END
     rts
 
     +BACKLINK "+!", 2 ; ( num addr -- )
