@@ -44,19 +44,19 @@ $103 lda,x $105 cmp,x 1 @@ beq, \ lsb
 2 @:
 \ not done, branch back
 w ldx, \ restore x
-' branch jmp,
+rts, \ rts into the compiled jmp <dopos>
 1 @:
 $104 lda,x $106 cmp,x 2 @@ bne, \ msb
 \ loop done
-\ skip branch addr
-pla, clc, 3 adc,# w2 sta,
+\ skip the 3-byte jmp <dopos>
+pla, clc, 4 adc,# w2 sta,
 pla, 0 adc,# w2 1+ sta,
 txa, clc, 6 adc,# tax, txs, \ sp += 6
 w ldx, \ restore x
 w2 (jmp),
 
 : loop
-postpone (loop) dup , resolve-leaves ; immediate
+postpone (loop) $4c c, dup , resolve-leaves ; immediate
 
 : (+loop) ( inc -- )
 r> swap r> 2dup +

@@ -31,7 +31,7 @@ SEPARATOR_NAME1 = '=-=-=-=-=-=-=-=,s'
 SEPARATOR_NAME2 = '=-------------=,s'
 SEPARATOR_NAME3 = '=-=---=-=---=-=,s'
 
-.PHONY: help build test clean docs check all deploy
+.PHONY: help build test clean docs check all deploy labels emu verify
 
 help:
 	@echo "Available targets:"
@@ -42,11 +42,28 @@ help:
 	@echo "  check    - Run disk image in VICE emulator"
 	@echo "  all      - Same as build"
 	@echo "  deploy   - Full build with tests, cartridge, and PDF manual"
+	@echo "  verify   - Cycle/correctness verify via the chrono6502 emulator (fast, headless)"
 	@echo ""
 	@echo "Toolchain targets:"
 	@echo "  $(DISK_IMAGE) - Build disk image directly"
 
 build: $(DISK_IMAGE)
+
+# --- Headless cycle/correctness verification (tools/chrono6502) ---
+CHRONO = tools/chrono6502/target/release/chrono6502
+
+labels.vice: durexforth.prg
+	$(AS) -I asm --vicelabels labels.vice asm/durexforth.asm
+
+labels: labels.vice
+
+emu:
+	cd tools/chrono6502 && cargo build --release
+
+verify: durexforth.prg labels.vice emu
+	cd tools/chrono6502 && cargo test
+	$(CHRONO) --prg durexforth.prg --labels labels.vice selftest
+	$(CHRONO) --prg durexforth.prg --repo . gate
 
 test: deploy
 
@@ -117,5 +134,5 @@ check: $(DISK_IMAGE)
 	$(X64) $(DISK_IMAGE)
 
 clean:
-	rm -f *.lbl *.prg *.$(DISK_SUF)
+	rm -f *.lbl *.prg *.$(DISK_SUF) labels.vice
 	rm -rf build deploy

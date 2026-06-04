@@ -1,4 +1,4 @@
-; U< - UM* UM/MOD M+ INVERT NEGATE ABS * DNEGATE M* 0< S>D FM/MOD /MOD UD/MOD
+; U< U> - UM* UM/MOD M+ INVERT NEGATE ABS * DNEGATE M* 0< S>D FM/MOD /MOD UD/MOD
 
 ; UM/MOD by Garth Wilson
 ; http://6502.org/source/integers/ummodfix/ummodfix.htm
@@ -22,6 +22,23 @@ U_LESS
     sty	LSB, x
     rts
 
+    +BACKLINK "u>", 2
+U_GREATER ; ( a b -- flag )  a>b unsigned = b<a
+    ldy #0
+    lda MSB+1, x
+    cmp MSB, x
+    bcc +
+    bne ++
+    lda LSB, x
+    cmp LSB+1, x
+    bcs +
+++  dey
++   inx
+    sty MSB, x
+    sty LSB, x
+U_GREATER_END
+    rts
+
     +BACKLINK "-", 1
 MINUS
     lda	LSB + 1, x
@@ -34,6 +51,7 @@ MINUS
     sta MSB + 1, x
 
     inx
+MINUS_END
     rts
 
 product = W
@@ -151,12 +169,20 @@ INVERT
     lda LSB, x
     eor #$ff
     sta LSB,x
+INVERT_END
     rts
 
     +BACKLINK "negate", 6
-NEGATE
-    jsr INVERT
-    jmp ONEPLUS
+NEGATE ; ( n -- -n )  two's complement: 0 - n
+    sec
+    lda #0
+    sbc LSB, x
+    sta LSB, x
+    lda #0
+    sbc MSB, x
+    sta MSB, x
+NEGATE_END
+    rts
 
     +BACKLINK "abs", 3
 ABS
@@ -214,9 +240,16 @@ ZERO_LESS
     rts
 
     +BACKLINK "s>d", 3
-S_TO_D
-    jsr DUP
-    jmp ZERO_LESS
+S_TO_D ; ( n -- n d_hi )  sign-extend single to double
+    dex
+    ldy #0
+    lda MSB+1, x
+    bpl +
+    dey
++   sty LSB, x
+    sty MSB, x
+S_TO_D_END
+    rts
 
     +BACKLINK "fm/mod", 6
 FM_DIV_MOD

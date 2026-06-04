@@ -38,7 +38,7 @@ over i 2+ @ u< if drop 0 leave then
 : xt>nt ( xt -- nt | 0 )
 0 swap literal dowords drop ;
 
-: 3+ 3 + ; : 4+ 4 + ; : 5+ 5 + ;
+: 3+ 3 + ; : 4+ 4 + ; : 5+ 5 + ; : 6+ 6 + ;
 
 : scan-0branch ( addr -- addr+5 )
 dup 3+ @ 2dup branch! \ src dst src
@@ -48,11 +48,15 @@ u> 0= if \ back
 : skip-lits ( addr -- addr )
 3+ dup c@ + 1+ ;
 
-: scan-loop ( addr -- addr+5 )
+: scan-loop-sz ( addr sz -- addr+sz )
 \ correct #else to #leave
-5+ branchptr @ here ?do
++ branchptr @ here ?do
 dup i 2+ @ = if #leave i 4+ c! then
 5 +loop ;
+\ (loop) is jsr (loop) + 3-byte jmp <dopos> = 6 bytes;
+\ (+loop) is jsr (+loop) + bare 2-byte target = 5 bytes.
+: scan-loop ( addr -- addr+6 ) 6 scan-loop-sz ;
+: scan-+loop ( addr -- addr+5 ) 5 scan-loop-sz ;
 
 : scan-jsr ( addr -- addr )
 dup 1+ @ case
@@ -61,7 +65,7 @@ dup 1+ @ case
 ['] lits of skip-lits endof
 ['] (?do) of 5+ endof
 ['] (loop) of scan-loop endof
-['] (+loop) of scan-loop endof
+['] (+loop) of scan-+loop endof
 ['] (of) of 5+ endof
 ['] 0branch of scan-0branch endof
 drop 3+ dup endcase ;
@@ -131,7 +135,7 @@ dup 1 + @ case
 ['] lits of print-lits endof
 ['] (do) of 3+ ." do " endof
 ['] (?do) of 5+ ." ?do " endof
-['] (loop) of 5+ ." loop " endof
+['] (loop) of 6+ ." loop " endof
 ['] (+loop) of 5+ ." +loop " endof
 ['] (of) of print-of endof
 ['] 0branch of print-0branch endof
